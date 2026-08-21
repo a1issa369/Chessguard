@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node / React (for later, when we build the frontend)
+node_modules/
+dist/
+build/
+
+# Bulk fetched game data — don't bloat the repo with hundreds of PGNs.
+backend/sample_games/*
+!backend/sample_games/sample1.pgn
+!backend/sample_games/.gitkeep
+
+# OS junk
+.DS_Store

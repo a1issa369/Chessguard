@@ -1,0 +1,20 @@
+[Event "Live Chess"]
+[Site "Chess.com"]
+[Date "2026.08.15"]
+[White "suspicious_player99"]
+[Black "normal_human_42"]
+[Result "1-0"]
+[WhiteElo "1450"]
+[BlackElo "1480"]
+[TimeControl "600"]
+
+1. e4 {[%clk 0:09:58]} e5 {[%clk 0:09:55]}
+2. Nf3 {[%clk 0:09:57]} Nc6 {[%clk 0:09:50]}
+3. Bb5 {[%clk 0:09:57]} a6 {[%clk 0:09:44]}
+4. Ba4 {[%clk 0:09:56]} Nf6 {[%clk 0:09:40]}
+5. O-O {[%clk 0:09:56]} Be7 {[%clk 0:09:33]}
+6. Re1 {[%clk 0:09:55]} b5 {[%clk 0:09:28]}
+7. Bb3 {[%clk 0:09:55]} d6 {[%clk 0:09:22]}
+8. c3 {[%clk 0:09:54]} O-O {[%clk 0:09:15]}
+9. h3 {[%clk 0:09:53]} Na5 {[%clk 0:09:10]}
+10. Bc2 {[%clk 0:09:53]} c5 {[%clk 0:09:03]} 1-0
