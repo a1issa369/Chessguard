@@ -10,9 +10,15 @@ dist/
 build/
 
 # Bulk fetched game data — don't bloat the repo with hundreds of PGNs.
+# Keep a handful of curated examples in backend/sample_games/ instead
+# for demos, and .gitignore the rest.
 backend/sample_games/*
 !backend/sample_games/sample1.pgn
 !backend/sample_games/.gitkeep
 
 # OS junk
 .DS_Store
+
+# Downloaded Kaggle data -- large, external, and re-downloadable via the
+# kaggle CLI, so it shouldn't live in the repo.
+backend/kaggle_data/
