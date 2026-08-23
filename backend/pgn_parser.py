@@ -80,11 +80,22 @@ def parse_pgn(pgn_text: str) -> ParsedGame:
 def move_times_used(game: ParsedGame, player: str) -> list:
     """
     Convert raw clock *remaining* values into time *used* per move for one
-    player ('white' or 'black'), since that's what actually reveals behavior.
+    player ('white' or 'black').
 
-    White moves are at even indices (0, 2, 4, ...), Black at odd (1, 3, 5, ...).
+    IMPORTANT: TimeControl can be "base+increment" (e.g. "60+1" = 60s base,
+    +1s added back to your clock after every move you make). If we ignore
+    the increment, our "time used" math comes out too low or even negative,
+    since some of what looks like clock recovery is really just the
+    increment being credited back. So: time_used = prev_clock - clk + increment.
     """
-    start_seconds = float(game.tags.get("TimeControl", "600").split("+")[0])
+    tc = game.tags.get("TimeControl", "600")
+    if "+" in tc:
+        base_str, incr_str = tc.split("+")
+        increment = float(incr_str)
+    else:
+        base_str, increment = tc, 0.0
+    start_seconds = float(base_str)
+
     idx_offset = 0 if player == "white" else 1
 
     player_clocks = [
@@ -95,20 +106,33 @@ def move_times_used(game: ParsedGame, player: str) -> list:
     times_used = []
     prev_clock = start_seconds
     for clk in player_clocks:
-        times_used.append(round(prev_clock - clk, 1))
+        used = prev_clock - clk + increment
+        times_used.append(round(max(used, 0.0), 1))  # clamp: can't think negative time
         prev_clock = clk
     return times_used
 
 
 if __name__ == "__main__":
-    with open("sample_games/sample1.pgn") as f:
+    import sys
+
+    path = sys.argv[1] if len(sys.argv) > 1 else "sample_games/sample1.pgn"
+
+    with open(path) as f:
         pgn_text = f.read()
 
     game = parse_pgn(pgn_text)
 
+    print(f"Parsing: {path}")
     print("Tags:", game.tags)
     print(f"\nTotal half-moves parsed: {len(game.moves)}")
     print("First 5 (move, clock_remaining_seconds):", game.moves[:5])
+
+    base_time = float(game.tags.get("TimeControl", "600").split("+")[0])
+    if base_time < 180:
+        print(f"\n  Base time is {base_time}s — this is a bullet/hyperbullet "
+              f"game. Move-time variance is naturally compressed here and is "
+              f"a weak cheat signal on its own; better suited to rapid/blitz "
+              f"games (600s+).")
 
     white_times = move_times_used(game, "white")
     black_times = move_times_used(game, "black")
