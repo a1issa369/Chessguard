@@ -81,9 +81,9 @@ def main():
     parser.add_argument("csv_path")
     parser.add_argument("engine_path")
     parser.add_argument("--n_per_class", type=int, default=10)
-    parser.add_argument("--dataset_csv", default="../dataset.csv",
+    parser.add_argument("--dataset_csv", default="data/dataset.csv",
                          help="Our original training CSV, to fit the model on")
-    parser.add_argument("--out", default="kaggle_validation_results.csv")
+    parser.add_argument("--out", default="data/kaggle_validation_results.csv")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
@@ -144,6 +144,7 @@ def main():
             os.unlink(tmp_path)
 
     val_df = pd.DataFrame(rows)
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
     val_df.to_csv(args.out, index=False)
     print(f"\nSaved {len(val_df)} validation rows to {args.out}")
 

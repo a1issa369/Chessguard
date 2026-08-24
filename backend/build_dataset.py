@@ -37,7 +37,7 @@ def main():
                               "opponent's history, so we skip them.")
     parser.add_argument("--synthetic_dir", required=True)
     parser.add_argument("--engine_path", required=True)
-    parser.add_argument("--out", default="dataset.csv")
+    parser.add_argument("--out", default="data/dataset.csv")
     parser.add_argument("--max_real_games", type=int, default=40,
                          help="Cap how many real games to process -- engine "
                               "analysis is slow, no need to run all 115 yet.")
@@ -88,6 +88,7 @@ def main():
             rows.append(row)
         print(f"  {path}: done ({len(rows)} rows so far)")
 
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=[
             "game_id", "player", "label"

@@ -25,7 +25,7 @@ LABEL = "label"
 
 
 def main():
-    csv_path = sys.argv[1] if len(sys.argv) > 1 else "dataset.csv"
+    csv_path = sys.argv[1] if len(sys.argv) > 1 else "data/dataset.csv"
     df = pd.read_csv(csv_path)
 
     print(f"Loaded {len(df)} rows: {sum(df[LABEL] == 0)} clean, "

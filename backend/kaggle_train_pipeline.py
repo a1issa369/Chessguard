@@ -79,8 +79,8 @@ def main():
     parser.add_argument("--train_per_class", type=int, default=15)
     parser.add_argument("--test_per_class", type=int, default=10)
     parser.add_argument("--seed", type=int, default=7)
-    parser.add_argument("--out_train", default="kaggle_train.csv")
-    parser.add_argument("--out_test", default="kaggle_test.csv")
+    parser.add_argument("--out_train", default="data/kaggle_train.csv")
+    parser.add_argument("--out_test", default="data/kaggle_test.csv")
     args = parser.parse_args()
 
     random.seed(args.seed)
@@ -108,6 +108,7 @@ def main():
 
     train_df = pd.DataFrame(train_rows)
     test_df = pd.DataFrame(test_rows)
+    os.makedirs("data", exist_ok=True)
     train_df.to_csv(args.out_train, index=False)
     test_df.to_csv(args.out_test, index=False)
     print(f"\nSaved {len(train_df)} train rows -> {args.out_train}")

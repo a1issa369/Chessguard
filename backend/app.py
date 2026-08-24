@@ -33,8 +33,8 @@ from fetch_games import fetch_recent_games
 # Set this to wherever Stockfish lives on YOUR machine if different.
 STOCKFISH_PATH = os.environ.get("STOCKFISH_PATH", "/opt/homebrew/bin/stockfish")
 
-MODEL = joblib.load("model.joblib")
-with open("model_features.json") as f:
+MODEL = joblib.load("model/model.joblib")
+with open("model/model_features.json") as f:
     FEATURES = json.load(f)
 
 app = FastAPI(title="ChessGuard API")
