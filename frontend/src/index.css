@@ -1,1 +1,52 @@
 @import "tailwindcss";
+
+@theme {
+  --color-board-dark: #3b2a1e;
+  --color-board-light: #ede4d3;
+  --color-paper: #faf7f0;
+  --color-ink: #1f1b16;
+  --color-felt: #4b6b4f;
+  --color-oxblood: #a63d2f;
+  --color-brass: #b08b3d;
+  --color-brass-ink: #7d5c22;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+/* Visible keyboard focus everywhere -- accessibility floor, not optional. */
+:focus-visible {
+  outline: 2px solid var(--color-felt);
+  outline-offset: 2px;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-rise-in {
+  animation: rise-in 0.5s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
