@@ -39,12 +39,17 @@ with open("model/model_features.json") as f:
 
 app = FastAPI(title="ChessGuard API")
 
-# Allow the React dev server (localhost:5173 for Vite, 3000 for CRA) to
-# call this API from the browser. In production you'd lock this down to
-# your actual frontend's domain instead of allowing everything.
+# Allow the local dev servers plus, in production, whatever frontend
+# domain is set via env var (e.g. your Vercel deployment URL). Comma-
+# separated so you can list more than one if needed.
+_extra_origins = os.environ.get("FRONTEND_ORIGINS", "")
+ALLOWED_ORIGINS = ["http://localhost:5173", "http://localhost:3000"] + [
+    o.strip() for o in _extra_origins.split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )

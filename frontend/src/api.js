@@ -5,7 +5,10 @@
 // (e.g. deploying it somewhere other than localhost), this is the only
 // file that needs to change.
 
-const API_BASE = "http://localhost:8000";
+// Vite exposes any env var prefixed VITE_ via import.meta.env, set at
+// BUILD time. On Vercel, set VITE_API_BASE to your deployed Render URL.
+// Locally, with no env var set, this falls back to localhost.
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
 export async function analyzeUsername(username, maxGames = 3, sortOrder = "recent") {
   const res = await fetch(`${API_BASE}/analyze/username`, {
