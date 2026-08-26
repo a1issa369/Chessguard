@@ -40,22 +40,28 @@ export default function GameCard({ game, style }) {
 
   return (
     <div
-      className="animate-rise-in rounded-lg border border-board-dark/15 bg-white/60 p-6 shadow-sm"
+      className="animate-rise-in rounded-lg border border-board-dark/15 bg-surface p-6 shadow-sm"
       style={style}
     >
-      <div className="mb-4 flex items-start justify-between gap-4 border-b border-board-dark/10 pb-4">
-        <div className="font-data text-[11px] uppercase tracking-wide text-ink/70">
-          {formatTimestamp(game.end_time)}
-          <span className="mx-2 text-ink/20">&middot;</span>
-          {game.time_control ?? "unknown tc"}
-          <span className="mx-2 text-ink/20">&middot;</span>
-          {game.moves_analyzed} moves
-        </div>
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <p className="font-body text-sm font-medium text-ink">
+          {game.player}
+          <span className="mx-1.5 font-data text-xs text-ink/50">vs</span>
+          {game.opponent}
+        </p>
         <span
           className={`shrink-0 rounded-full border px-3 py-1 font-body text-xs font-semibold uppercase tracking-wide ${v.fg} ${v.border} ${v.bg}`}
         >
           {v.label} &middot; {percent}%
         </span>
+      </div>
+
+      <div className="mb-4 border-b border-board-dark/10 pb-4 font-data text-[11px] uppercase tracking-wide text-ink/70">
+        {formatTimestamp(game.end_time)}
+        <span className="mx-2 text-ink/20">&middot;</span>
+        {game.time_control ?? "unknown tc"}
+        <span className="mx-2 text-ink/20">&middot;</span>
+        {game.moves_analyzed} moves
       </div>
 
       <FairPlayBar probability={game.cheat_probability} />

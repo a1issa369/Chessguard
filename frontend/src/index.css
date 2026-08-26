@@ -4,6 +4,7 @@
   --color-board-dark: #3b2a1e;
   --color-board-light: #ede4d3;
   --color-paper: #faf7f0;
+  --color-surface: #ffffff;
   --color-ink: #1f1b16;
   --color-felt: #4b6b4f;
   --color-oxblood: #a63d2f;
@@ -15,10 +16,33 @@
   --font-data: "IBM Plex Mono", ui-monospace, monospace;
 }
 
+/* Dark mode: redefine the same tokens rather than sprinkling dark:
+   variants across every component. Since every utility (bg-paper,
+   text-ink, etc.) already reads from these CSS custom properties,
+   swapping the values here cascades everywhere automatically.
+
+   Note board-dark/board-light effectively swap ROLE here (board-dark
+   becomes the light tone used for hairlines/borders, board-light
+   becomes a dark recessed tone for the bar track) -- the names describe
+   which literal board square they came from, not "always light" /
+   "always dark" in every theme. */
+.dark {
+  --color-board-dark: #f1e9da;
+  --color-board-light: #35302a;
+  --color-paper: #201b16;
+  --color-surface: #2a241e;
+  --color-ink: #f1e9da;
+  --color-felt: #7fae86;
+  --color-oxblood: #e0796a;
+  --color-brass: #c89a4a;
+  --color-brass-ink: #e8c169;
+}
+
 body {
   background-color: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-body);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Visible keyboard focus everywhere -- accessibility floor, not optional. */

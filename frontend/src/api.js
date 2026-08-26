@@ -7,11 +7,11 @@
 
 const API_BASE = "http://localhost:8000";
 
-export async function analyzeUsername(username, maxGames = 3) {
+export async function analyzeUsername(username, maxGames = 3, sortOrder = "recent") {
   const res = await fetch(`${API_BASE}/analyze/username`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, max_games: maxGames }),
+    body: JSON.stringify({ username, max_games: maxGames, sort_order: sortOrder }),
   });
 
   if (!res.ok) {

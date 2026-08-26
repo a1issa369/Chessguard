@@ -7,8 +7,8 @@ We're building this ourselves once so you understand the raw format before
 we swap in the `python-chess` library for real move validation later. PGN
 has two parts:
 
-1. Tag pairs — metadata like [White "..."] [WhiteElo "..."] etc.
-2. Movetext — the actual moves, optionally annotated with things like
+1. Tag pairs: metadata like [White "..."] [WhiteElo "..."] etc.
+2. Movetext: the actual moves, optionally annotated with things like
    {[%clk 0:09:58]} which is the player's remaining clock time right
    after making that move. THIS clock data is the raw signal we'll use
    to detect suspiciously consistent (engine-like) move timing.
@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
     base_time = float(game.tags.get("TimeControl", "600").split("+")[0])
     if base_time < 180:
-        print(f"\n  Base time is {base_time}s — this is a bullet/hyperbullet "
+        print(f"\n⚠️  Base time is {base_time}s, this is a bullet/hyperbullet "
               f"game. Move-time variance is naturally compressed here and is "
               f"a weak cheat signal on its own; better suited to rapid/blitz "
               f"games (600s+).")

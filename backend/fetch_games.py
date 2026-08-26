@@ -2,7 +2,7 @@
 fetch_games.py
 
 Pulls a player's recent games from the Chess.com Public API.
-Run this LOCALLY (it needs internet access) — not in a sandbox.
+Run this LOCALLY (it needs internet access), not in a sandbox.
 
 Usage:
     python3 fetch_games.py <chess.com_username> [--months 1] [--out sample_games]
@@ -20,7 +20,7 @@ from urllib.error import HTTPError
 BASE_URL = "https://api.chess.com/pub/player/{username}/games/archives"
 
 # Chess.com blocks requests with no/generic User-Agent. Put your real
-# contact info here if you plan to make many requests — it's a courtesy
+# contact info here if you plan to make many requests, as a courtesy
 # to their ops team and keeps you from getting rate-limited.
 HEADERS = {
     "User-Agent": "ChessGuard-Project/0.1 (contact: ahmedkadarissa@gmail.com)"
@@ -86,7 +86,7 @@ def main():
 
     print(f"Saved {saved} games with clock data to '{args.out}/'.")
     if games and saved == 0:
-        print("(Games found, but none had clock annotations — try 'rapid' "
+        print("(Games found, but none had clock annotations, try 'rapid' "
               "or 'blitz' games, since some formats/bots omit clocks.)")
 
 

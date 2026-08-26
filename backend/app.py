@@ -57,6 +57,7 @@ class PgnRequest(BaseModel):
 class UsernameRequest(BaseModel):
     username: str
     max_games: int = 3  # engine analysis is slow -- keep this small for a live demo
+    sort_order: str = "recent"  # "recent" or "earliest"
 
 
 def score_pgn_text(pgn_text: str) -> dict:
@@ -124,27 +125,46 @@ def analyze_username(req: UsernameRequest):
     # Only games with clock data and non-bullet time controls are usable --
     # same filtering logic we used building our own training data.
     usable = [g for g in games if g.get("pgn") and "%clk" in g["pgn"]]
-    usable = usable[-req.max_games:]  # most recent N
 
-    if not usable:
+    # Chess.com's archive returns games oldest -> newest, so the END of the
+    # list is "most recent" and the START is "earliest" -- no re-sorting
+    # needed, just pick which end to slice from.
+    if req.sort_order == "earliest":
+        selected = usable[:req.max_games]
+    else:
+        selected = usable[-req.max_games:]
+
+    if not selected:
         raise HTTPException(status_code=404,
                              detail="No recent games with clock data found "
                                     "(try a player who plays rapid/blitz, not bullet)")
 
     results = []
-    for g in usable:
+    for g in selected:
         try:
             side_results = score_pgn_text(g["pgn"])
         except Exception as e:
-            continue  # skip any game that fails to parse/analyze rather than 500ing the whole request
+            # Don't 500 the whole request over one bad game -- but DO log
+            # it, otherwise every game silently disappearing looks
+            # identical to "no games found" from the outside.
+            print(f"Skipping a game due to analysis error: {e}")
+            continue
 
-        # Only report the requested player's side, not their opponent's
+        # Find the requested player's side AND their opponent's name, so
+        # the UI can show "playerA vs playerB" instead of just one name.
+        own, opponent_name = None, "Unknown"
         for color, r in side_results.items():
             if r["player"].lower() == req.username.lower():
-                results.append({
-                    "end_time": g.get("end_time"),
-                    "time_control": g.get("time_control"),
-                    **r,
-                })
+                own = r
+            else:
+                opponent_name = r["player"]
+
+        if own is not None:
+            results.append({
+                "end_time": g.get("end_time"),
+                "time_control": g.get("time_control"),
+                "opponent": opponent_name,
+                **own,
+            })
 
     return {"username": req.username, "games_analyzed": len(results), "results": results}

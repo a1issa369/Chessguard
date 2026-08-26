@@ -25,7 +25,7 @@ import chess.engine
 
 
 # How hard Stockfish "thinks" per position. Higher = more accurate but
-# slower. depth=12 is a reasonable balance for a first pass — a few hundred
+# slower. depth=12 is a reasonable balance for a first pass, taking a few hundred
 # ms per move. Cranking this to 20+ gives more reliable numbers but a
 # 40-move game could take minutes instead of seconds.
 ANALYSIS_DEPTH = 12
