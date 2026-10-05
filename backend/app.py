@@ -119,7 +119,7 @@ def analyze_pgn(req: PgnRequest):
 @app.post("/analyze/username")
 def analyze_username(req: UsernameRequest):
     try:
-        games = fetch_recent_games(req.username, months=1)
+        games = fetch_recent_games(req.username, months=4)
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Could not fetch games for "
                              f"'{req.username}': {e}")
@@ -134,10 +134,7 @@ def analyze_username(req: UsernameRequest):
     # Chess.com's archive returns games oldest -> newest, so the END of the
     # list is "most recent" and the START is "earliest" -- no re-sorting
     # needed, just pick which end to slice from.
-    if req.sort_order == "earliest":
-        selected = usable[:req.max_games]
-    else:
-        selected = usable[-req.max_games:]
+    selected = usable[-req.max_games:]
 
     if not selected:
         raise HTTPException(status_code=404,
