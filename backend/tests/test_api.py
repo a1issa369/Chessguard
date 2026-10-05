@@ -172,3 +172,12 @@ def test_rate_limit_triggers_for_uncached_requests(client, patched, app_module):
     codes = [client.post(URL, json=body(username=f"user{i}")).status_code for i in range(limit + 1)]
     assert codes[:limit] == [200] * limit
     assert codes[limit] == 429
+
+
+def test_server_side_game_limit_is_enforced(client, patched, app_module, monkeypatch):
+    monkeypatch.setattr(app_module, "MAX_GAMES_LIMIT", 3)
+    patched["games"] = [make_game("Alice", "Bob", 1)]
+    r = client.post(URL, json=body(max_games=4))
+    assert r.status_code == 400 and r.json()["detail"]["code"] == "TOO_MANY_GAMES"
+    assert patched["calls"] == 0
+    assert client.post(URL, json=body(max_games=3)).status_code == 200

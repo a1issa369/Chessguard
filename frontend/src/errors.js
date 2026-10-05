@@ -12,6 +12,7 @@ export function toastForError(err, username) {
       return { kind: "error", title: "Server unreachable", message: err.message };
     case "UPSTREAM_ERROR":
       return { kind: "error", title: "Chess.com is unavailable", message: err.message };
+    case "TOO_MANY_GAMES":
     case "BUSY":
       return { kind: "warning", title: "Analyzer is busy", message: err.message };
     case "RATE_LIMITED":

@@ -210,7 +210,7 @@ export default function App({ theme, onThemeChange }) {
           {loading && (
             <div className="space-y-4" aria-live="polite">
               <p className="font-body text-sm text-ink/70">
-                Running a Stockfish review of each move, which can take a minute.
+                Running a Stockfish review of each move. On free hosting this takes roughly a minute per game.
               </p>
               {slow && (
                 <p className="font-body text-sm text-ink/70">

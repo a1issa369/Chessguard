@@ -24,7 +24,7 @@ describe("toastForError", () => {
     expect(t.message).toContain("ghost99");
   });
 
-  it.each(["BUSY", "RATE_LIMITED", "INVALID_INPUT"])("%s is a warning", (code) => {
+  it.each(["BUSY", "RATE_LIMITED", "INVALID_INPUT", "TOO_MANY_GAMES"])("%s is a warning", (code) => {
     expect(toastForError(new ApiError(code, "m", 429), "u").kind).toBe("warning");
   });
 

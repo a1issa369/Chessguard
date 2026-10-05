@@ -193,6 +193,8 @@ def _analyze_username_uncached(req: UsernameRequest):
 CACHE = TTLCache(ttl_seconds=int(os.environ.get("CACHE_TTL_SECONDS", "600")))
 LIMITER = RateLimiter(limit=int(os.environ.get("RATE_LIMIT_PER_MINUTE", "6")), window_seconds=60)
 GATE = ConcurrencyGate(max_concurrent=int(os.environ.get("MAX_CONCURRENT_ANALYSES", "2")))
+# Lowers the per-request game cap on slow hosts (the schema still allows up to 10).
+MAX_GAMES_LIMIT = int(os.environ.get("MAX_GAMES_LIMIT", "10"))
 
 
 def _client_ip(request: Request) -> str:
@@ -206,6 +208,11 @@ def _client_ip(request: Request) -> str:
 
 @app.post("/analyze/username")
 def analyze_username(req: UsernameRequest, request: Request):
+    if req.max_games > MAX_GAMES_LIMIT:
+        raise HTTPException(status_code=400, detail={
+            "code": "TOO_MANY_GAMES",
+            "message": f"This server analyzes at most {MAX_GAMES_LIMIT} games per request."})
+
     key = (req.username.lower(), req.max_games, req.sort_order)
 
     cached = CACHE.get(key)

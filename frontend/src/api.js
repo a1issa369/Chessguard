@@ -1,7 +1,9 @@
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
 // Keep in sync with the backend limit (Field(le=10) in app.py).
-export const MAX_GAMES = 10;
+// The deployed site sets VITE_MAX_GAMES lower (Render's free CPU analyzes about
+// one game per minute). The backend enforces its own MAX_GAMES_LIMIT as well.
+export const MAX_GAMES = Math.min(10, Math.max(1, Number(import.meta.env.VITE_MAX_GAMES) || 10));
 
 // An error that carries a machine-readable code, so the UI can decide
 // HOW to show a failure instead of just printing a string.

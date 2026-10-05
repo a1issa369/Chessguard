@@ -151,9 +151,11 @@ build (Vercel).
 | Render | Root directory | `backend` |
 | Render | `FRONTEND_ORIGINS` | the Vercel site URL |
 | Render | `MAX_CONCURRENT_ANALYSES` | `1` on a free single-CPU instance |
+| Render | `MAX_GAMES_LIMIT` | `3` on a free instance (about a minute per game) |
 | Vercel | Root directory | `frontend` |
 | Vercel | `VITE_API_BASE` | the Render service URL (HTTPS) |
 | Vercel | `VITE_SITE_URL` | the Vercel site URL |
+| Vercel | `VITE_MAX_GAMES` | `3`, matching the Render limit |
 
 `VITE_SITE_URL` fills in the social-preview tags and generates
 `sitemap.xml` and `robots.txt` at build time.
