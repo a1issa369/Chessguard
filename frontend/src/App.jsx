@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { analyzeUsername } from "./api";
+import { analyzeUsername, MAX_GAMES } from "./api";
 import GameCard from "./components/GameCard";
 import { FairPlayBarSkeleton } from "./components/FairPlayBar";
 import ThemeToggle from "./components/ThemeToggle";
+import ToastStack, { useToasts } from "./components/ToastStack";
 
 function useTheme() {
   const [theme, setTheme] = useState(() => {
@@ -27,6 +28,7 @@ export default function App() {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { toasts, push, dismiss } = useToasts();
 
   // Re-sorting the dropdown re-orders whatever games we already fetched,
   // instantly, with no new request. The backend's sort_order (sent at
@@ -43,17 +45,38 @@ export default function App() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!username.trim()) return;
+    const name = username.trim();
+    if (!name) return;
+
+    if (!Number.isInteger(maxGames) || maxGames < 1 || maxGames > MAX_GAMES) {
+      push({
+        kind: "warning",
+        title: `Up to ${MAX_GAMES} games at a time`,
+        message: `Each game gets a full Stockfish review, so the limit is ${MAX_GAMES}. Pick a number from 1 to ${MAX_GAMES}.`,
+      });
+      setMaxGames((n) => Math.min(MAX_GAMES, Math.max(1, Math.round(n) || 1)));
+      return;
+    }
 
     setLoading(true);
     setError(null);
     setResults(null);
 
     try {
-      const data = await analyzeUsername(username.trim(), maxGames, sortOrder);
+      const data = await analyzeUsername(name, maxGames, sortOrder);
       setResults(data);
     } catch (err) {
-      setError(err.message);
+      if (err.code === "USER_NOT_FOUND") {
+        push({
+          kind: "error",
+          title: "Account not found",
+          message: `There is no Chess.com account named \u201c${name}\u201d. Check the spelling and try again.`,
+        });
+      } else if (err.code === "NETWORK") {
+        push({ kind: "error", title: "Server unreachable", message: err.message });
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -103,9 +126,23 @@ export default function App() {
           <input
             type="number"
             min={1}
-            max={10}
+            max={MAX_GAMES}
             value={maxGames}
-            onChange={(e) => setMaxGames(Number(e.target.value))}
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (raw === "") return setMaxGames("");
+              const n = Number(raw);
+              if (n > MAX_GAMES) {
+                setMaxGames(MAX_GAMES);
+                push({
+                  kind: "warning",
+                  title: `Up to ${MAX_GAMES} games at a time`,
+                  message: `Each game gets a full Stockfish review, so the limit is ${MAX_GAMES}. Set the count to ${MAX_GAMES}.`,
+                });
+              } else {
+                setMaxGames(n);
+              }
+            }}
             title="Number of games to analyze"
             className="w-16 rounded-md border border-board-dark/15 bg-transparent px-2 py-2
                        text-center font-data text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-felt/50"
@@ -172,6 +209,7 @@ export default function App() {
           </p>
         </footer>
       </div>
+      <ToastStack toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

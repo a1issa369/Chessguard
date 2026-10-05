@@ -1,28 +1,51 @@
-// api.js
-//
-// Small wrapper around fetch() so the rest of the app never deals with
-// URLs or JSON parsing directly. If the backend's address ever changes
-// (e.g. deploying it somewhere other than localhost), this is the only
-// file that needs to change.
-
-// Vite exposes any env var prefixed VITE_ via import.meta.env, set at
-// BUILD time. On Vercel, set VITE_API_BASE to your deployed Render URL.
-// Locally, with no env var set, this falls back to localhost.
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
-export async function analyzeUsername(username, maxGames = 3, sortOrder = "recent") {
-  const res = await fetch(`${API_BASE}/analyze/username`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, max_games: maxGames, sort_order: sortOrder }),
-  });
+// Keep in sync with the backend limit (Field(le=10) in app.py).
+export const MAX_GAMES = 10;
 
-  if (!res.ok) {
-    // FastAPI puts error messages in a "detail" field -- surface that
-    // to the user instead of a generic "something went wrong."
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `Request failed (${res.status})`);
+// An error that carries a machine-readable code, so the UI can decide
+// HOW to show a failure instead of just printing a string.
+export class ApiError extends Error {
+  constructor(code, message, status) {
+    super(message);
+    this.name = "ApiError";
+    this.code = code;
+    this.status = status;
   }
+}
 
+// FastAPI sends errors in three shapes:
+//   { detail: { code, message } }   our structured errors
+//   { detail: "text" }              plain HTTPException
+//   { detail: [ {msg, loc}, ... ] } 422 validation errors
+export function parseError(status, body) {
+  const d = body && body.detail;
+  if (d && typeof d === "object" && !Array.isArray(d) && d.code) {
+    return new ApiError(d.code, d.message || "Request failed.", status);
+  }
+  if (Array.isArray(d)) {
+    return new ApiError("INVALID_INPUT", d[0]?.msg || "Invalid input.", status);
+  }
+  if (typeof d === "string") {
+    return new ApiError("ERROR", d, status);
+  }
+  return new ApiError("ERROR", `Request failed (${status}).`, status);
+}
+
+export async function analyzeUsername(username, maxGames = 3, sortOrder = "recent") {
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/analyze/username`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, max_games: maxGames, sort_order: sortOrder }),
+    });
+  } catch {
+    throw new ApiError("NETWORK", "Can't reach the ChessGuard server. Check your connection and try again.", 0);
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw parseError(res.status, body);
+  }
   return res.json();
 }

@@ -19,12 +19,13 @@ Requires:
 import json
 import os
 import tempfile
+import urllib.error
 
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from engine_analysis import analyze_game
 from features import windowed_features
@@ -61,7 +62,7 @@ class PgnRequest(BaseModel):
 
 class UsernameRequest(BaseModel):
     username: str
-    max_games: int = 3  # engine analysis is slow -- keep this small for a live demo
+    max_games: int = Field(3, ge=1, le=10)  # engine analysis is slow
     sort_order: str = "recent"  # "recent" or "earliest"
 
 
@@ -120,12 +121,22 @@ def analyze_pgn(req: PgnRequest):
 def analyze_username(req: UsernameRequest):
     try:
         games = fetch_recent_games(req.username, months=4)
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            raise HTTPException(status_code=404, detail={
+                "code": "USER_NOT_FOUND",
+                "message": f"No Chess.com account named '{req.username}'."})
+        raise HTTPException(status_code=502, detail={
+            "code": "UPSTREAM_ERROR",
+            "message": f"Chess.com returned an error ({e.code}). Try again shortly."})
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Could not fetch games for "
-                             f"'{req.username}': {e}")
+        raise HTTPException(status_code=502, detail={
+            "code": "UPSTREAM_ERROR",
+            "message": f"Could not reach Chess.com: {e}"})
 
     if not games:
-        raise HTTPException(status_code=404, detail=f"No games found for '{req.username}'")
+        raise HTTPException(status_code=404, detail={"code": "NO_GAMES",
+                                                            "message": f"No games found for '{req.username}'."})
 
     # Only games with clock data and non-bullet time controls are usable --
     # same filtering logic we used building our own training data.
