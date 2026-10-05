@@ -1,0 +1,3 @@
+# Only needed to rebuild the dataset and retrain the model locally.
+-r requirements.txt
+kaggle

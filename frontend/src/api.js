@@ -49,3 +49,12 @@ export async function analyzeUsername(username, maxGames = 3, sortOrder = "recen
   }
   return res.json();
 }
+
+// Free hosting puts the server to sleep when idle, and waking it takes about
+// a minute. Pinging it as soon as the page opens means it is usually awake
+// by the time the visitor presses Analyze. The response is never read, so
+// "no-cors" keeps the console clean. Production builds only.
+export function warmUpServer() {
+  if (!import.meta.env.PROD) return;
+  fetch(`${API_BASE}/`, { mode: "no-cors" }).catch(() => {});
+}

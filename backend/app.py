@@ -19,16 +19,18 @@ Requires:
 import json
 import os
 import tempfile
+from typing import Literal
 import urllib.error
 
 import joblib
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from engine_analysis import analyze_game
 from features import windowed_features
+from guards import ConcurrencyGate, RateLimiter, TTLCache
 from fetch_games import fetch_recent_games
 
 # Set this to wherever Stockfish lives on YOUR machine if different.
@@ -61,9 +63,9 @@ class PgnRequest(BaseModel):
 
 
 class UsernameRequest(BaseModel):
-    username: str
+    username: str = Field(min_length=1, max_length=25, pattern=r"^[A-Za-z0-9_-]+$")
     max_games: int = Field(3, ge=1, le=10)  # engine analysis is slow
-    sort_order: str = "recent"  # "recent" or "earliest"
+    sort_order: Literal["recent", "earliest"] = "recent"
 
 
 def score_pgn_text(pgn_text: str) -> dict:
@@ -117,8 +119,7 @@ def analyze_pgn(req: PgnRequest):
         raise HTTPException(status_code=400, detail=f"Could not analyze PGN: {e}")
 
 
-@app.post("/analyze/username")
-def analyze_username(req: UsernameRequest):
+def _analyze_username_uncached(req: UsernameRequest):
     try:
         games = fetch_recent_games(req.username, months=4)
     except urllib.error.HTTPError as e:
@@ -145,12 +146,15 @@ def analyze_username(req: UsernameRequest):
     # Chess.com's archive returns games oldest -> newest, so the END of the
     # list is "most recent" and the START is "earliest" -- no re-sorting
     # needed, just pick which end to slice from.
-    selected = usable[-req.max_games:]
+    if req.sort_order == "earliest":
+        selected = usable[:req.max_games]
+    else:
+        selected = usable[-req.max_games:]
 
     if not selected:
-        raise HTTPException(status_code=404,
-                             detail="No recent games with clock data found "
-                                    "(try a player who plays rapid/blitz, not bullet)")
+        raise HTTPException(status_code=404, detail={
+            "code": "NO_USABLE_GAMES",
+            "message": "No recent games with clock data found. Try a player who plays rapid or blitz, not bullet."})
 
     results = []
     for g in selected:
@@ -181,3 +185,47 @@ def analyze_username(req: UsernameRequest):
             })
 
     return {"username": req.username, "games_analyzed": len(results), "results": results}
+
+
+# ---------------------------------------------------------------------------
+# Guards around the expensive endpoint (see guards.py for the reasoning).
+# ---------------------------------------------------------------------------
+CACHE = TTLCache(ttl_seconds=int(os.environ.get("CACHE_TTL_SECONDS", "600")))
+LIMITER = RateLimiter(limit=int(os.environ.get("RATE_LIMIT_PER_MINUTE", "6")), window_seconds=60)
+GATE = ConcurrencyGate(max_concurrent=int(os.environ.get("MAX_CONCURRENT_ANALYSES", "2")))
+
+
+def _client_ip(request: Request) -> str:
+    # Behind Render's proxy the real client is in X-Forwarded-For. This is
+    # best-effort (a client can spoof it); GATE is the hard protection.
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+@app.post("/analyze/username")
+def analyze_username(req: UsernameRequest, request: Request):
+    key = (req.username.lower(), req.max_games, req.sort_order)
+
+    cached = CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    if not LIMITER.allow(_client_ip(request)):
+        raise HTTPException(status_code=429, detail={
+            "code": "RATE_LIMITED",
+            "message": "Too many requests. Please wait a minute and try again."})
+
+    if not GATE.acquire():
+        raise HTTPException(status_code=429, detail={
+            "code": "BUSY",
+            "message": "The analyzer is busy with other requests. Try again in a minute."})
+    try:
+        result = _analyze_username_uncached(req)
+    finally:
+        GATE.release()
+
+    if result["games_analyzed"] > 0:
+        CACHE.set(key, result)
+    return result
