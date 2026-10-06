@@ -20,6 +20,7 @@ export default function Privacy({ theme, onThemeChange }) {
           <li>There are no accounts, no sign-up, and no ads.</li>
           <li>The only thing you give the site is a Chess.com username that you type in.</li>
           <li>The site counts anonymous page views, with no cookies and no personal profiles, so the author can see roughly how many people use it.</li>
+          <li>The server keeps an anonymous usage log (counts, timing and outcomes) that contains no usernames and no IP addresses.</li>
           <li>Nothing you enter is sold or shared for marketing.</li>
         </UL>
 
@@ -33,9 +34,9 @@ export default function Privacy({ theme, onThemeChange }) {
         </P>
         <P>
           Results are kept in the server&rsquo;s memory for about ten minutes so that a
-          repeated request is fast, then discarded. They are not written to a database.
-          Game data comes from Chess.com&rsquo;s public API and describes publicly visible
-          games.
+          repeated request is fast, then discarded. The results themselves are not written
+          to a database. Game data comes from Chess.com&rsquo;s public API and describes
+          publicly visible games.
         </P>
 
         <H2>Analytics</H2>
@@ -46,6 +47,16 @@ export default function Privacy({ theme, onThemeChange }) {
           across other websites. Only the site&rsquo;s author can see these numbers, and they
           are used to understand how the project is used. The ChessGuard server does not
           log or store the usernames you enter beyond the short-lived cache described above.
+        </P>
+
+        <H2>Usage statistics</H2>
+        <P>
+          Each time an analysis is requested, the server saves one anonymous record in a
+          database so the author can measure how the project performs. A record contains
+          only: the time, how many games were requested and analyzed, whether the answer
+          came from the cache, how long it took, and whether it succeeded or which kind of
+          error occurred. It does not contain the username you entered, your IP address, or
+          the results. Only the site&rsquo;s author can read these records.
         </P>
 
         <H2>Cookies and local storage</H2>
@@ -68,6 +79,9 @@ export default function Privacy({ theme, onThemeChange }) {
             browser details under its own privacy policy.
           </li>
           <li>
+            <strong>Supabase</strong> stores the anonymous usage records described above.
+          </li>
+          <li>
             <strong>Vercel</strong> hosts the website and <strong>Render</strong> hosts the analysis
             server. Like most hosts, they may keep standard request logs (such as IP address and
             timestamps) under their own policies.
@@ -80,7 +94,8 @@ export default function Privacy({ theme, onThemeChange }) {
         <H2>Your choices and contact</H2>
         <P>
           Because the site keeps no accounts or stored profiles, there is nothing to download
-          or delete on our side beyond the short-lived memory cache. For any question about
+          or delete on our side beyond the short-lived memory cache and the anonymous usage records,
+          which cannot be traced back to you. For any question about
           this policy, email{" "}
           <a className="underline underline-offset-2 hover:text-ink" href={`mailto:${SITE.contactEmail}`}>
             {SITE.contactEmail}

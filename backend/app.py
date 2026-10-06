@@ -16,9 +16,11 @@ Requires:
     (pandas, scikit-learn, python-chess already installed)
 """
 
+import hmac
 import json
 import os
 import tempfile
+import time
 from typing import Literal
 import urllib.error
 
@@ -32,6 +34,7 @@ from engine_analysis import analyze_game
 from features import windowed_features
 from guards import ConcurrencyGate, RateLimiter, TTLCache
 from fetch_games import fetch_recent_games
+from usage import UsageLogger
 
 # Set this to wherever Stockfish lives on YOUR machine if different.
 STOCKFISH_PATH = os.environ.get("STOCKFISH_PATH", "/opt/homebrew/bin/stockfish")
@@ -196,6 +199,26 @@ GATE = ConcurrencyGate(max_concurrent=int(os.environ.get("MAX_CONCURRENT_ANALYSE
 # Lowers the per-request game cap on slow hosts (the schema still allows up to 10).
 MAX_GAMES_LIMIT = int(os.environ.get("MAX_GAMES_LIMIT", "10"))
 
+# Anonymous usage logging (see usage.py). Does nothing unless SUPABASE_URL and
+# SUPABASE_SECRET_KEY are set. EXAMPLE_USERNAME marks the "Try an example"
+# account; OWNER_KEY lets the author tag their own curl tests (header
+# X-ChessGuard-Owner) so they can be excluded from the stats.
+USAGE = UsageLogger.from_env()
+EXAMPLE_USERNAME = os.environ.get("EXAMPLE_USERNAME", "Nitrobeast705").lower()
+OWNER_KEY = os.environ.get("OWNER_KEY", "")
+
+
+def _is_owner(request: Request) -> bool:
+    supplied = request.headers.get("x-chessguard-owner", "")
+    return bool(OWNER_KEY) and hmac.compare_digest(supplied, OWNER_KEY)
+
+
+def _log_usage(**event) -> None:
+    try:
+        USAGE.record(**event)
+    except Exception as e:  # never let logging affect a response
+        print(f"usage logging failed: {e}")
+
 
 def _client_ip(request: Request) -> str:
     # Behind Render's proxy the real client is in X-Forwarded-For. This is
@@ -206,8 +229,8 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-@app.post("/analyze/username")
-def analyze_username(req: UsernameRequest, request: Request):
+def _analyze_with_guards(req: UsernameRequest, request: Request):
+    """Returns (result, served_from_cache)."""
     if req.max_games > MAX_GAMES_LIMIT:
         raise HTTPException(status_code=400, detail={
             "code": "TOO_MANY_GAMES",
@@ -217,7 +240,7 @@ def analyze_username(req: UsernameRequest, request: Request):
 
     cached = CACHE.get(key)
     if cached is not None:
-        return cached
+        return cached, True
 
     if not LIMITER.allow(_client_ip(request)):
         raise HTTPException(status_code=429, detail={
@@ -235,4 +258,33 @@ def analyze_username(req: UsernameRequest, request: Request):
 
     if result["games_analyzed"] > 0:
         CACHE.set(key, result)
-    return result
+    return result, False
+
+
+@app.post("/analyze/username")
+def analyze_username(req: UsernameRequest, request: Request):
+    started = time.perf_counter()
+    outcome, games_analyzed, cache_hit = "ok", 0, False
+    try:
+        result, cache_hit = _analyze_with_guards(req, request)
+        games_analyzed = result["games_analyzed"]
+        if games_analyzed == 0:
+            outcome = "NO_RESULTS"  # every selected game failed to analyze
+        return result
+    except HTTPException as e:
+        detail = e.detail
+        outcome = detail.get("code", "ERROR") if isinstance(detail, dict) else "ERROR"
+        raise
+    except Exception:
+        outcome = "INTERNAL_ERROR"
+        raise
+    finally:
+        _log_usage(
+            outcome=outcome,
+            games_requested=req.max_games,
+            games_analyzed=games_analyzed,
+            cache_hit=cache_hit,
+            duration_ms=int((time.perf_counter() - started) * 1000),
+            is_example=req.username.lower() == EXAMPLE_USERNAME,
+            is_owner=_is_owner(request),
+        )

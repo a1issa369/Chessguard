@@ -2,6 +2,9 @@
 
 [![CI](https://github.com/a1issa369/Chessguard/actions/workflows/ci.yml/badge.svg)](https://github.com/a1issa369/Chessguard/actions/workflows/ci.yml)
 
+**Live demo: [chessguard.me](https://chessguard.me)** (free hosting, so the
+first request after a quiet period can take about a minute to wake the server)
+
 A full-stack fair-play (cheat) detection system for online chess, built to
 explore the same core problem that shows up in fraud detection and
 anomaly detection more broadly: **spotting behavior that deviates from a
@@ -96,6 +99,36 @@ Chess.com API --> PGN parsing --> Stockfish analysis --> feature extraction
   WCAG-checked contrast, reduced-motion support, day and night themes,
   responsive down to phone width, and a custom 404 page.
 
+## Performance: why a game takes about a minute
+
+Judging whether a move was engine-like requires knowing the best move, so
+for every move in a game Stockfish searches the position 12 moves deep
+(depth 12) and the result is compared with what the player actually did.
+A 44-move game is about 88 half-moves, and each move that is not the
+engine's top choice needs a second search to measure how much worse it was,
+so one game is on the order of 130 searches.
+
+- **It is a hosting budget, not a design limit.** A short 20-half-move
+  sample analyzes in about 1.4 seconds on my laptop. The free Render tier
+  gives the service about a tenth of a CPU core, and a one-game request
+  measured 48.7 seconds there. The site says so up front.
+- **Depth is tied to the model.** The classifier was trained on depth-12
+  features. Lowering the depth would be faster but would shift the inputs
+  and quietly make the scores less reliable, so the depth stays fixed.
+- **An optimization I tested and rejected.** The position after one move is
+  searched again as the "before" position of the next, so reusing the first
+  result cuts searches by roughly a third. I benchmarked it against the
+  original on a sample game and the features moved (for example, one
+  side's top-1 match rate went from 100% to 90%), because a repeated search
+  with a warm hash can choose a different near-equal best move. A change
+  that alters model inputs is not a free speedup, so I reverted it.
+- **Mitigations that are in place.** Results are cached for ten minutes,
+  requests are capped at 3 games and rate-limited, and the page warns about
+  the wait and pings the server on load to wake it early.
+- **What would actually fix it.** More CPU (a paid instance), or moving
+  analysis to an async job queue with progress polling so the wait does not
+  block the page.
+
 ## API
 
 | Endpoint | Purpose |
@@ -149,16 +182,28 @@ build (Vercel).
 | Where | Setting | Value |
 |---|---|---|
 | Render | Root directory | `backend` |
-| Render | `FRONTEND_ORIGINS` | the Vercel site URL |
+| Render | `FRONTEND_ORIGINS` | comma-separated site origins, for example `https://chessguard.me,https://www.chessguard.me` |
 | Render | `MAX_CONCURRENT_ANALYSES` | `1` on a free single-CPU instance |
 | Render | `MAX_GAMES_LIMIT` | `3` on a free instance (about a minute per game) |
+| Render | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | optional: turns on anonymous usage logging (see `analytics/`) |
+| Render | `OWNER_KEY` | optional: a secret that lets the author's own curl tests be excluded from usage stats |
 | Vercel | Root directory | `frontend` |
 | Vercel | `VITE_API_BASE` | the Render service URL (HTTPS) |
-| Vercel | `VITE_SITE_URL` | the Vercel site URL |
+| Vercel | `VITE_SITE_URL` | the public site URL, for example `https://chessguard.me` |
 | Vercel | `VITE_MAX_GAMES` | `3`, matching the Render limit |
 
 `VITE_SITE_URL` fills in the social-preview tags and generates
 `sitemap.xml` and `robots.txt` at build time.
+
+## Usage statistics
+
+The server writes one anonymous row per analysis request (outcome, games
+requested and analyzed, cache hit, duration) to a Supabase table. There is no
+field for a username or IP address, writes happen off the request path and can
+never fail a request, and the table is locked down with row level security so
+only the server's secret key can touch it. `analytics/usage_events.sql` creates
+the table and `analytics/usage_stats.sql` holds the queries behind numbers such
+as cache hit rate and median and p95 seconds per game.
 
 ## Limitations and future work
 
